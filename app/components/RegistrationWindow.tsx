@@ -41,7 +41,7 @@ export default function RegistrationWindow() {
         <p className="pt-1 text-sm text-gray-600">Уже зарегистрированы?</p>
 
         <Link
-          href="/signin"
+          href="/signInPage"
           className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
         >
           Войти в систему
