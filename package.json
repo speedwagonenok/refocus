@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:superadmin": "node scripts/seed-superadmin.mjs"
+    "seed:system-admin": "node scripts/seed-system-admin.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",

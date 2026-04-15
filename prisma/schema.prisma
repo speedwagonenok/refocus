@@ -14,14 +14,40 @@ enum Role {
   PATIENT
   DOCTOR
   REGISTRAR
-  SUPERADMIN
+  SYSTEM_ADMIN
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  fullName     String
-  role         Role     @default(PATIENT)
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id              Int              @id @default(autoincrement())
+  email           String           @unique
+  fullName        String
+  role            Role             @default(PATIENT)
+  passwordHash    String
+  createdAt       DateTime         @default(now())
+  doctorSchedules DoctorSchedule[]
+}
+
+model DoctorSchedule {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  weekStartDate DateTime @db.Date
+  weekday   Weekday
+  startTime String
+  endTime   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  doctor User @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, weekStartDate, weekday, startTime, endTime])
 }

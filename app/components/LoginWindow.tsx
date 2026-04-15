@@ -48,7 +48,7 @@ export default function LoginWindow() {
             message?: string;
             user?: {
               id: number;
-              role: "PATIENT" | "DOCTOR" | "REGISTRAR" | "SUPERADMIN";
+              role: "PATIENT" | "DOCTOR" | "REGISTRAR" | "SYSTEM_ADMIN";
             };
           }
         | null;

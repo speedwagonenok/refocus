@@ -20,6 +20,7 @@ export async function getSessionUser() {
     select: {
       id: true,
       fullName: true,
+      email: true,
       role: true,
     },
   });

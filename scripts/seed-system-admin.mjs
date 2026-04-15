@@ -18,20 +18,21 @@ const adapter = new PrismaPg(
 
 const prisma = new PrismaClient({ adapter });
 
-const email = process.env.SUPERADMIN_EMAIL?.trim().toLowerCase();
-const password = process.env.SUPERADMIN_PASSWORD;
-const fullName = process.env.SUPERADMIN_FULL_NAME?.trim() || "Суперадмин";
+const email = process.env.SYSTEM_ADMIN_EMAIL?.trim().toLowerCase();
+const password = process.env.SYSTEM_ADMIN_PASSWORD;
+const fullName =
+  process.env.SYSTEM_ADMIN_FULL_NAME?.trim() || "Системный администратор";
 
 if (!email) {
-  throw new Error("SUPERADMIN_EMAIL is required");
+  throw new Error("SYSTEM_ADMIN_EMAIL is required");
 }
 
 if (!password) {
-  throw new Error("SUPERADMIN_PASSWORD is required");
+  throw new Error("SYSTEM_ADMIN_PASSWORD is required");
 }
 
 if (password.length < 8) {
-  throw new Error("SUPERADMIN_PASSWORD must be at least 8 chars");
+  throw new Error("SYSTEM_ADMIN_PASSWORD must be at least 8 chars");
 }
 
 const passwordHash = await bcrypt.hash(password, 12);
@@ -40,16 +41,16 @@ await prisma.user.upsert({
   where: { email },
   update: {
     fullName,
-    role: Role.SUPERADMIN,
+    role: Role.SYSTEM_ADMIN,
     passwordHash,
   },
   create: {
     fullName,
     email,
-    role: Role.SUPERADMIN,
+    role: Role.SYSTEM_ADMIN,
     passwordHash,
   },
 });
 
-console.log(`Superadmin is ready: ${email}`);
+console.log(`System admin is ready: ${email}`);
 await prisma.$disconnect();
