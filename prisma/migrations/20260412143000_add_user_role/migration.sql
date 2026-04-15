@@ -1,0 +1,6 @@
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('PATIENT', 'DOCTOR', 'REGISTRAR', 'SUPERADMIN');
+
+-- AlterTable
+ALTER TABLE "User"
+ADD COLUMN "role" "Role" NOT NULL DEFAULT 'PATIENT';

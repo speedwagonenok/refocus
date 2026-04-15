@@ -20,6 +20,21 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Superadmin bootstrap
+
+To create (or update) the first superadmin account, set environment variables and run:
+
+```bash
+npm run seed:superadmin
+```
+
+Required env vars:
+
+- `DATABASE_URL`
+- `SUPERADMIN_EMAIL`
+- `SUPERADMIN_PASSWORD`
+- `SUPERADMIN_FULL_NAME` (optional, default: `Суперадмин`)
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

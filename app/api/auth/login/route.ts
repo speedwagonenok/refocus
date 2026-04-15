@@ -2,8 +2,9 @@ import { compare } from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import {
-  getFullNameValidationError,
+  getEmailValidationError,
   getPasswordValidationError,
+  normalizeEmail,
 } from "@/lib/authValidation";
 import { prisma } from "@/lib/prisma";
 import {
@@ -12,44 +13,54 @@ import {
 } from "@/lib/session";
 
 type LoginPayload = {
-  fullName?: string;
+  email?: string;
   password?: string;
 };
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as LoginPayload | null;
 
-  if (!body?.fullName || !body?.password) {
+  if (!body) {
     return NextResponse.json(
-      { message: "Заполните ФИО и пароль." },
+      { message: "Некорректный запрос." },
       { status: 400 },
     );
   }
 
-  const fullName = body.fullName.trim();
-  const password = body.password;
-
-  const fullNameError = getFullNameValidationError(fullName);
-  if (fullNameError) {
+  if (typeof body.email !== "string") {
     return NextResponse.json(
-      { message: fullNameError },
+      { message: "Введите email." },
+      { status: 400 },
+    );
+  }
+
+  const emailError = getEmailValidationError(body.email);
+  if (emailError) {
+    return NextResponse.json({ message: emailError }, { status: 400 });
+  }
+
+  const password = body.password;
+  if (typeof password !== "string") {
+    return NextResponse.json(
+      { message: "Введите пароль." },
       { status: 400 },
     );
   }
 
   const passwordError = getPasswordValidationError(password);
   if (passwordError) {
-    return NextResponse.json(
-      { message: passwordError },
-      { status: 400 },
-    );
+    return NextResponse.json({ message: passwordError }, { status: 400 });
   }
 
+  const email = normalizeEmail(body.email);
+
   const user = await prisma.user.findUnique({
-    where: { fullName },
+    where: { email },
     select: {
       id: true,
       fullName: true,
+      email: true,
+      role: true,
       passwordHash: true,
     },
   });
@@ -75,6 +86,8 @@ export async function POST(req: Request) {
       user: {
         id: user.id,
         fullName: user.fullName,
+        email: user.email,
+        role: user.role,
       },
     },
     { status: 200 },

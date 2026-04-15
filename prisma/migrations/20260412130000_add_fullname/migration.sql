@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "fullName" TEXT NOT NULL DEFAULT 'Не указано';
+
+ALTER TABLE "User" ALTER COLUMN "fullName" DROP DEFAULT;

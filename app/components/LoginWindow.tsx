@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import {
-  getFullNameValidationError,
+  getEmailValidationError,
   getPasswordValidationError,
 } from "@/lib/authValidation";
 
 export default function LoginWindow() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,9 +20,9 @@ export default function LoginWindow() {
     event.preventDefault();
     setErrorMessage("");
 
-    const fullNameError = getFullNameValidationError(fullName);
-    if (fullNameError) {
-      setErrorMessage(fullNameError);
+    const emailError = getEmailValidationError(email);
+    if (emailError) {
+      setErrorMessage(emailError);
       return;
     }
 
@@ -40,11 +40,17 @@ export default function LoginWindow() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fullName, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = (await response.json().catch(() => null)) as
-        | { message?: string; user?: { id: number } }
+        | {
+            message?: string;
+            user?: {
+              id: number;
+              role: "PATIENT" | "DOCTOR" | "REGISTRAR" | "SUPERADMIN";
+            };
+          }
         | null;
 
       if (!response.ok) {
@@ -52,13 +58,18 @@ export default function LoginWindow() {
         return;
       }
 
-      const userId = data?.user?.id;
-      if (!userId) {
+      const loggedInUserId = data?.user?.id;
+      if (!loggedInUserId) {
         setErrorMessage("Не удалось получить идентификатор пользователя.");
         return;
       }
 
-      router.push(`/user/${userId}`);
+      if (data.user?.role === "PATIENT") {
+        router.push(`/user/${loggedInUserId}`);
+        return;
+      }
+
+      router.push("/admin");
     } catch {
       setErrorMessage("Ошибка сети. Повторите попытку.");
     } finally {
@@ -73,18 +84,19 @@ export default function LoginWindow() {
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label
-            htmlFor="fullName"
+            htmlFor="email"
             className="mb-2 block text-sm font-medium text-gray-700"
           >
-            ФИО
+            Email
           </label>
           <input
-            id="fullName"
-            name="fullName"
-            type="text"
-            placeholder="Введите ФИО"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
             className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none transition focus:border-black"
           />
@@ -101,6 +113,7 @@ export default function LoginWindow() {
             id="password"
             name="password"
             type="password"
+            autoComplete="current-password"
             placeholder="Введите пароль"
             value={password}
             onChange={(event) => setPassword(event.target.value)}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import {
+  getEmailValidationError,
   getFullNameValidationError,
   getPasswordValidationError,
 } from "@/lib/authValidation";
@@ -12,18 +13,26 @@ import {
 export default function RegistrationWindow() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
+    setSuccessToast(null);
 
     const fullNameError = getFullNameValidationError(fullName);
     if (fullNameError) {
       setErrorMessage(fullNameError);
+      return;
+    }
+
+    const emailError = getEmailValidationError(email);
+    if (emailError) {
+      setErrorMessage(emailError);
       return;
     }
 
@@ -41,7 +50,7 @@ export default function RegistrationWindow() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fullName, password }),
+        body: JSON.stringify({ fullName, email, password }),
       });
 
       const data = (await response.json().catch(() => null)) as
@@ -53,10 +62,10 @@ export default function RegistrationWindow() {
         return;
       }
 
-      setShowSuccessToast(true);
+      setSuccessToast("Успешно.");
       setTimeout(() => {
         router.push("/signInPage");
-      }, 1200);
+      }, 900);
     } catch {
       setErrorMessage("Ошибка сети. Повторите попытку.");
     } finally {
@@ -80,9 +89,30 @@ export default function RegistrationWindow() {
             id="fullName"
             name="fullName"
             type="text"
-            placeholder="Введите ФИО"
+            autoComplete="name"
+            placeholder="Иванов Иван Иванович"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
+            required
+            className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none transition focus:border-black"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="email"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
             className="w-full rounded-md border border-gray-300 px-3 py-2 outline-none transition focus:border-black"
           />
@@ -99,6 +129,7 @@ export default function RegistrationWindow() {
             id="password"
             name="password"
             type="password"
+            autoComplete="new-password"
             placeholder="Введите пароль"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -130,9 +161,9 @@ export default function RegistrationWindow() {
         </button>
       </form>
 
-      {showSuccessToast ? (
-        <div className="fixed bottom-6 right-6 rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          Регистрация успешна
+      {successToast ? (
+        <div className="fixed bottom-6 right-6 max-w-sm rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
+          {successToast}
         </div>
       ) : null}
     </section>
