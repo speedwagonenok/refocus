@@ -16,7 +16,6 @@ export default async function AdminPage() {
   if (sessionUser.role === "SYSTEM_ADMIN") {
     return (
       <SuperadminPanel
-        currentUserId={sessionUser.id}
         currentUserName={sessionUser.fullName}
         currentUserEmail={sessionUser.email}
       />

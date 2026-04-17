@@ -1,4 +1,4 @@
-type UserRole = "PATIENT" | "DOCTOR" | "REGISTRAR" | "SYSTEM_ADMIN";
+type UserRole = "PATIENT" | "DOCTOR" | "MANAGER" | "SYSTEM_ADMIN";
 type ActiveTab = "EMPLOYEES" | "PATIENTS";
 
 type UserRow = {
@@ -15,15 +15,13 @@ type UsersSectionProps = {
   searchQuery: string;
   loading: boolean;
   visibleUsers: UserRow[];
-  draftRoles: Record<number, UserRole>;
-  currentUserId: number;
-  isUpdatingId: number | null;
   roleOptions: Array<{ value: UserRole; label: string }>;
   onTabChange: (tab: ActiveTab) => void;
   onRoleFilterChange: (value: "ALL" | UserRole) => void;
   onSearchQueryChange: (value: string) => void;
-  onDraftRoleChange: (userId: number, role: UserRole) => void;
-  onRoleUpdate: (userId: number) => void;
+  onOpenUserEdit: (user: UserRow) => void;
+  onDeleteEmployee: (user: UserRow) => void;
+  deletingEmployeeId: number | null;
   getRoleLabel: (role: UserRole) => string;
 };
 
@@ -33,15 +31,13 @@ export default function UsersSection({
   searchQuery,
   loading,
   visibleUsers,
-  draftRoles,
-  currentUserId,
-  isUpdatingId,
   roleOptions,
   onTabChange,
   onRoleFilterChange,
   onSearchQueryChange,
-  onDraftRoleChange,
-  onRoleUpdate,
+  onOpenUserEdit,
+  onDeleteEmployee,
+  deletingEmployeeId,
   getRoleLabel,
 }: UsersSectionProps) {
   return (
@@ -131,49 +127,30 @@ export default function UsersSection({
                   <td className="px-4 py-3">{user.id}</td>
                   <td className="px-4 py-3">{user.fullName}</td>
                   <td className="px-4 py-3">{user.email}</td>
-                  <td className="px-4 py-3 text-[#1f3344]">
-                    <select
-                      value={draftRoles[user.id] ?? user.role}
-                      onChange={(event) =>
-                        onDraftRoleChange(user.id, event.target.value as UserRole)
-                      }
-                      className="rounded-md border border-[#9fb9cf] bg-white px-2 py-1 text-xs text-[#1f3344] outline-none transition focus:border-[#2f698f]"
-                    >
-                      {roleOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+                  <td className="px-4 py-3 text-[#1f3344]">{getRoleLabel(user.role)}</td>
                   <td className="px-4 py-3 text-[#2b3f50]">
                     {new Date(user.createdAt).toLocaleString("ru-RU")}
                   </td>
                   <td className="px-4 py-3">
-                    {(() => {
-                      const draftRole = draftRoles[user.id] ?? user.role;
-                      const roleChanged = draftRole !== user.role;
-                      const isCurrentUser = user.id === currentUserId;
-                      const disabled = isUpdatingId === user.id || isCurrentUser || !roleChanged;
-
-                      return (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenUserEdit(user)}
+                        className="rounded-md border border-[#8fb0cc] bg-[#edf5fb] px-3 py-1 text-xs font-semibold text-[#1f4e72] transition hover:bg-[#dfeef9]"
+                      >
+                        Редактировать
+                      </button>
+                      {activeTab === "EMPLOYEES" ? (
                         <button
                           type="button"
-                          onClick={() => onRoleUpdate(user.id)}
-                          disabled={disabled}
-                          className="rounded-md border border-[#8fb0cc] bg-[#edf5fb] px-3 py-1 text-xs font-semibold text-[#1f4e72] transition hover:bg-[#dfeef9] disabled:cursor-not-allowed disabled:opacity-60"
-                          title={
-                            isCurrentUser
-                              ? "Свою роль меняем только через второго SYSTEM_ADMIN"
-                              : roleChanged
-                                ? `Сохранить роль: ${getRoleLabel(draftRole)}`
-                                : "Роль не изменена"
-                          }
+                          onClick={() => onDeleteEmployee(user)}
+                          disabled={deletingEmployeeId === user.id}
+                          className="rounded-md border border-[#c99daa] bg-[#f6ecef] px-3 py-1 text-xs font-semibold text-[#8e3f52] transition hover:bg-[#f1e2e7] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {isUpdatingId === user.id ? "Сохранение..." : "Сохранить"}
+                          {deletingEmployeeId === user.id ? "Удаление..." : "Удалить"}
                         </button>
-                      );
-                    })()}
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

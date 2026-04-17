@@ -4,21 +4,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/sessionUser";
 
-type UpdateRolePayload = {
-  role?: Role;
-};
-
-function isAllowedRole(role: unknown): role is Role {
-  return (
-    role === Role.PATIENT ||
-    role === Role.DOCTOR ||
-    role === Role.MANAGER ||
-    role === Role.SYSTEM_ADMIN
-  );
-}
-
-export async function PATCH(
-  req: Request,
+export async function DELETE(
+  _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const sessionUser = await getSessionUser();
@@ -32,11 +19,6 @@ export async function PATCH(
     return NextResponse.json({ message: "Некорректный ID пользователя." }, { status: 400 });
   }
 
-  const body = (await req.json().catch(() => null)) as UpdateRolePayload | null;
-  if (!body?.role || !isAllowedRole(body.role)) {
-    return NextResponse.json({ message: "Некорректная роль." }, { status: 400 });
-  }
-
   const targetUser = await prisma.user.findUnique({
     where: { id: targetUserId },
     select: { id: true, role: true },
@@ -45,14 +27,21 @@ export async function PATCH(
     return NextResponse.json({ message: "Пользователь не найден." }, { status: 404 });
   }
 
-  if (targetUser.id === sessionUser.id && body.role !== Role.SYSTEM_ADMIN) {
+  if (targetUser.role === Role.PATIENT) {
     return NextResponse.json(
-      { message: "Нельзя снять роль SYSTEM_ADMIN у своей учетной записи." },
+      { message: "Удаление через эту кнопку доступно только для сотрудников." },
       { status: 400 },
     );
   }
 
-  if (targetUser.role === Role.SYSTEM_ADMIN && body.role !== Role.SYSTEM_ADMIN) {
+  if (targetUser.id === sessionUser.id) {
+    return NextResponse.json(
+      { message: "Нельзя удалить свою учетную запись." },
+      { status: 400 },
+    );
+  }
+
+  if (targetUser.role === Role.SYSTEM_ADMIN) {
     const systemAdminCount = await prisma.user.count({
       where: { role: Role.SYSTEM_ADMIN },
     });
@@ -64,16 +53,9 @@ export async function PATCH(
     }
   }
 
-  const updated = await prisma.user.update({
+  await prisma.user.delete({
     where: { id: targetUserId },
-    data: { role: body.role },
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      role: true,
-    },
   });
 
-  return NextResponse.json({ message: "Роль обновлена.", user: updated }, { status: 200 });
+  return NextResponse.json({ message: "Сотрудник удален." }, { status: 200 });
 }

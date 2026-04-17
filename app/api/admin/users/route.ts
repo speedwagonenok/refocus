@@ -19,7 +19,7 @@ type CreateEmployeePayload = {
 };
 
 function isAllowedEmployeeRole(role: unknown): role is Role {
-  return role === Role.DOCTOR || role === Role.REGISTRAR || role === Role.SYSTEM_ADMIN;
+  return role === Role.DOCTOR || role === Role.MANAGER || role === Role.SYSTEM_ADMIN;
 }
 
 export async function GET() {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
   if (!isAllowedEmployeeRole(body.role)) {
     return NextResponse.json(
-      { message: "Для сотрудника выберите роль DOCTOR, REGISTRAR или SYSTEM_ADMIN." },
+      { message: "Для сотрудника выберите роль DOCTOR, MANAGER или SYSTEM_ADMIN." },
       { status: 400 },
     );
   }

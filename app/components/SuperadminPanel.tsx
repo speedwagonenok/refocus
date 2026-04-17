@@ -6,9 +6,9 @@ import AdminSidebar from "@/app/components/AdminSidebar";
 import AdminTopBar from "@/app/components/AdminTopBar";
 import CreateEmployeeSection from "@/app/components/CreateEmployeeSection";
 import DoctorScheduleSection from "@/app/components/DoctorScheduleSection";
-import OverviewSection from "@/app/components/OverviewSection";
 import ScheduleEditModal from "@/app/components/ScheduleEditModal";
 import ToastMessage from "@/app/components/ToastMessage";
+import UserPasswordResetModal from "@/app/components/UserPasswordResetModal";
 import UsersSection from "@/app/components/UsersSection";
 import {
   CLINIC_CLOSE_TIME,
@@ -22,7 +22,7 @@ import {
   timeToMinutes,
 } from "@/lib/scheduleTime";
 
-type UserRole = "PATIENT" | "DOCTOR" | "REGISTRAR" | "SYSTEM_ADMIN";
+type UserRole = "PATIENT" | "DOCTOR" | "MANAGER" | "SYSTEM_ADMIN";
 type Weekday =
   | "MONDAY"
   | "TUESDAY"
@@ -62,7 +62,7 @@ type ScheduleRow = {
 const roleOptions: Array<{ value: UserRole; label: string }> = [
   { value: "PATIENT", label: "Пациент" },
   { value: "DOCTOR", label: "Врач" },
-  { value: "REGISTRAR", label: "Регистратор" },
+  { value: "MANAGER", label: "Менеджер" },
   { value: "SYSTEM_ADMIN", label: "Системный администратор" },
 ];
 
@@ -118,21 +118,15 @@ function weekInputToMondayIso(weekValue: string): string | null {
 }
 
 type SuperadminPanelProps = {
-  currentUserId: number;
   currentUserName: string;
   currentUserEmail: string;
 };
 
 type ActiveTab = "EMPLOYEES" | "PATIENTS";
 type ToastType = "success" | "error";
-type AdminSection =
-  | "OVERVIEW"
-  | "CREATE_EMPLOYEE"
-  | "USERS"
-  | "DOCTOR_SCHEDULE";
+type AdminSection = "CREATE_EMPLOYEE" | "USERS" | "DOCTOR_SCHEDULE";
 
 export default function SuperadminPanel({
-  currentUserId,
   currentUserName,
   currentUserEmail,
 }: SuperadminPanelProps) {
@@ -145,15 +139,17 @@ export default function SuperadminPanel({
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isUpdatingId, setIsUpdatingId] = useState<number | null>(null);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [resetUserPasswordValue, setResetUserPasswordValue] = useState("");
+  const [isResettingUserPassword, setIsResettingUserPassword] = useState(false);
+  const [deletingEmployeeId, setDeletingEmployeeId] = useState<number | null>(null);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("DOCTOR");
-  const [draftRoles, setDraftRoles] = useState<Record<number, UserRole>>({});
   const [activeTab, setActiveTab] = useState<ActiveTab>("EMPLOYEES");
-  const [activeSection, setActiveSection] = useState<AdminSection>("OVERVIEW");
+  const [activeSection, setActiveSection] = useState<AdminSection>("USERS");
   const [roleFilter, setRoleFilter] = useState<"ALL" | UserRole>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [doctors, setDoctors] = useState<DoctorOption[]>([]);
@@ -237,9 +233,6 @@ export default function SuperadminPanel({
       }
 
       setUsers(data.users);
-      setDraftRoles(
-        Object.fromEntries(data.users.map((user) => [user.id, user.role])),
-      );
     } catch {
       showToast("error", "Ошибка сети при загрузке пользователей.");
     } finally {
@@ -312,14 +305,6 @@ export default function SuperadminPanel({
     return () => clearInterval(timer);
   }, []);
 
-  const employeeCount = useMemo(
-    () => users.filter((user) => user.role !== "PATIENT").length,
-    [users],
-  );
-  const patientCount = useMemo(
-    () => users.filter((user) => user.role === "PATIENT").length,
-    [users],
-  );
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) {
@@ -331,9 +316,6 @@ export default function SuperadminPanel({
     return "Добрый вечер";
   }, []);
   const activeSectionTitle = useMemo(() => {
-    if (activeSection === "OVERVIEW") {
-      return "Обзор";
-    }
     if (activeSection === "CREATE_EMPLOYEE") {
       return "Создать сотрудника";
     }
@@ -379,15 +361,17 @@ export default function SuperadminPanel({
     });
   }, [users, activeTab, roleFilter, searchQuery]);
   const filteredDoctors = useMemo(() => {
-    const q = doctorSearchQuery.trim().toLowerCase();
-    if (!q) {
+    const rawQuery = doctorSearchQuery.trim().toLowerCase();
+    if (!rawQuery) {
       return doctors;
     }
+    const idQuery = rawQuery.replace(/^id\s*[:\-]?\s*/, "").replace(/^#/, "");
+
     return doctors.filter(
       (doctor) =>
-        doctor.fullName.toLowerCase().includes(q) ||
-        doctor.email.toLowerCase().includes(q) ||
-        String(doctor.id).includes(q),
+        doctor.fullName.toLowerCase().includes(rawQuery) ||
+        doctor.email.toLowerCase().includes(rawQuery) ||
+        String(doctor.id).includes(idQuery),
     );
   }, [doctors, doctorSearchQuery]);
   const selectedDoctor = useMemo(
@@ -533,36 +517,90 @@ export default function SuperadminPanel({
     }
   }
 
-  async function handleRoleUpdate(userId: number) {
-    const nextRole = draftRoles[userId];
-    if (!nextRole) {
+  function openUserEditModal(user: UserRow) {
+    setEditingUser(user);
+    setResetUserPasswordValue("");
+  }
+
+  function closeUserEditModal() {
+    setEditingUser(null);
+    setResetUserPasswordValue("");
+    setIsResettingUserPassword(false);
+  }
+
+  async function handleResetUserPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingUser) {
       return;
     }
 
-    setIsUpdatingId(userId);
+    const shouldReset = window.confirm(`Сбросить пароль пользователю ${editingUser.fullName}?`);
+    if (!shouldReset) {
+      return;
+    }
 
+    setIsResettingUserPassword(true);
     try {
-      const response = await fetch(`/api/admin/users/${userId}/role`, {
+      const response = await fetch(`/api/admin/users/${editingUser.id}/password`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: nextRole }),
+        body: JSON.stringify({ password: resetUserPasswordValue }),
       });
-
       const data = (await response.json().catch(() => null)) as
         | { message?: string }
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось обновить роль.");
+        showToast("error", data?.message ?? "Не удалось сбросить пароль.");
         return;
       }
 
-      showToast("success", data?.message ?? "Роль обновлена.");
+      showToast("success", data?.message ?? "Пароль пользователя обновлен.");
+      closeUserEditModal();
+    } catch {
+      showToast("error", "Ошибка сети при сбросе пароля.");
+    } finally {
+      setIsResettingUserPassword(false);
+    }
+  }
+
+  async function handleDeleteEmployee(user: UserRow) {
+    if (user.role === "PATIENT") {
+      showToast("error", "Удаление доступно только для сотрудников.");
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Удалить сотрудника ${user.fullName}? Это действие необратимо.`,
+    );
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingEmployeeId(user.id);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: "DELETE",
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { message?: string }
+        | null;
+
+      if (!response.ok) {
+        showToast("error", data?.message ?? "Не удалось удалить сотрудника.");
+        return;
+      }
+
+      if (editingUser?.id === user.id) {
+        closeUserEditModal();
+      }
+
+      showToast("success", data?.message ?? "Сотрудник удален.");
       await loadUsers();
     } catch {
-      showToast("error", "Ошибка сети при обновлении роли.");
+      showToast("error", "Ошибка сети при удалении сотрудника.");
     } finally {
-      setIsUpdatingId(null);
+      setDeletingEmployeeId(null);
     }
   }
 
@@ -773,13 +811,6 @@ export default function SuperadminPanel({
 
         <section className="min-w-0 flex-1 rounded-2xl bg-[#f8fbff] p-8 shadow-lg">
           <h1 className="text-2xl font-semibold text-gray-900">{activeSectionTitle}</h1>
-          {activeSection === "OVERVIEW" ? (
-            <OverviewSection
-              usersCount={users.length}
-              employeeCount={employeeCount}
-              patientCount={patientCount}
-            />
-          ) : null}
 
           {activeSection === "CREATE_EMPLOYEE" ? (
             <CreateEmployeeSection
@@ -804,17 +835,13 @@ export default function SuperadminPanel({
               searchQuery={searchQuery}
               loading={loading}
               visibleUsers={visibleUsers}
-              draftRoles={draftRoles}
-              currentUserId={currentUserId}
-              isUpdatingId={isUpdatingId}
               roleOptions={roleOptions}
               onTabChange={handleTabChange}
               onRoleFilterChange={setRoleFilter}
               onSearchQueryChange={setSearchQuery}
-              onDraftRoleChange={(userId, nextRole) =>
-                setDraftRoles((prev) => ({ ...prev, [userId]: nextRole }))
-              }
-              onRoleUpdate={(userId) => void handleRoleUpdate(userId)}
+              onOpenUserEdit={openUserEditModal}
+              onDeleteEmployee={(user) => void handleDeleteEmployee(user)}
+              deletingEmployeeId={deletingEmployeeId}
               getRoleLabel={getRoleLabel}
             />
           ) : null}
@@ -844,6 +871,10 @@ export default function SuperadminPanel({
               onEditDay={(weekday) => {
                 setDayEditorWeekday(weekday);
                 setScheduleWeekday(weekday);
+                setEditingScheduleId(null);
+              }}
+              onCloseDayEditor={() => {
+                setDayEditorWeekday(null);
                 setEditingScheduleId(null);
               }}
               dayEditorWeekday={dayEditorWeekday}
@@ -878,6 +909,16 @@ export default function SuperadminPanel({
         onEndTimeChange={handleEditEndTimeChange}
         onSubmit={handleSaveScheduleEdit}
         onCancel={() => setEditingScheduleId(null)}
+      />
+
+      <UserPasswordResetModal
+        editingUser={editingUser}
+        newPassword={resetUserPasswordValue}
+        isSubmitting={isResettingUserPassword}
+        getRoleLabel={getRoleLabel}
+        onPasswordChange={setResetUserPasswordValue}
+        onSubmit={handleResetUserPassword}
+        onCancel={closeUserEditModal}
       />
 
       <ToastMessage toast={toast} isVisible={isToastVisible} />

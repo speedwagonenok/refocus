@@ -1,4 +1,4 @@
-type AdminSection = "OVERVIEW" | "CREATE_EMPLOYEE" | "USERS" | "DOCTOR_SCHEDULE";
+type AdminSection = "CREATE_EMPLOYEE" | "USERS" | "DOCTOR_SCHEDULE";
 
 type AdminSidebarProps = {
   activeSection: AdminSection;
@@ -15,17 +15,6 @@ export default function AdminSidebar({
         Панель управления
       </p>
       <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => onChangeSection("OVERVIEW")}
-          className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
-            activeSection === "OVERVIEW"
-              ? "bg-[#2f698f] text-white"
-              : "border border-[#b5cadb] text-[#39556d] hover:bg-[#edf4fa]"
-          }`}
-        >
-          Обзор
-        </button>
         <button
           type="button"
           onClick={() => onChangeSection("CREATE_EMPLOYEE")}
