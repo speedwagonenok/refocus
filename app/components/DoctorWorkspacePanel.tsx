@@ -91,6 +91,14 @@ type DoctorAppointmentRow = {
     email: string;
   };
 };
+type PatientNoteRow = {
+  id: number;
+  content: string | null;
+  fileName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  doctorFullName: string;
+};
 
 const MAX_AVATAR_BYTES_CLIENT = 5 * 1024 * 1024;
 const MAX_AVATAR_SOURCE_BYTES = 15 * 1024 * 1024;
@@ -267,6 +275,15 @@ export default function DoctorWorkspacePanel({ currentUserName, currentUserEmail
   const [appointmentsError, setAppointmentsError] = useState("");
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [myPatientsSearch, setMyPatientsSearch] = useState("");
+  const [selectedPatientIdForNotes, setSelectedPatientIdForNotes] = useState<number | null>(null);
+  const [patientNotes, setPatientNotes] = useState<PatientNoteRow[]>([]);
+  const [patientNotesLoading, setPatientNotesLoading] = useState(false);
+  const [patientNotesError, setPatientNotesError] = useState("");
+  const [patientNoteSaving, setPatientNoteSaving] = useState(false);
+  const [patientNoteFile, setPatientNoteFile] = useState<File | null>(null);
+  const [patientNoteDragOver, setPatientNoteDragOver] = useState(false);
+  const patientNoteDragDepth = useRef(0);
+  const patientNoteInputRef = useRef<HTMLInputElement>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -420,6 +437,86 @@ export default function DoctorWorkspacePanel({ currentUserName, currentUserEmail
         patient.fullName.toLowerCase().includes(q) || patient.email.toLowerCase().includes(q),
     );
   }, [myPatients, myPatientsSearch]);
+  const selectedPatientForNotes = useMemo(
+    () => myPatients.find((patient) => patient.id === selectedPatientIdForNotes) ?? null,
+    [myPatients, selectedPatientIdForNotes],
+  );
+  const loadPatientNotes = useCallback(async (patientId: number) => {
+    setPatientNotesLoading(true);
+    setPatientNotesError("");
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/notes`, { cache: "no-store" });
+      const data = (await res.json().catch(() => null)) as
+        | { notes?: PatientNoteRow[]; message?: string }
+        | null;
+      if (!res.ok || !Array.isArray(data?.notes)) {
+        setPatientNotes([]);
+        setPatientNotesError(data?.message ?? "Не удалось загрузить заметки.");
+        return;
+      }
+      setPatientNotes(data.notes);
+    } catch {
+      setPatientNotes([]);
+      setPatientNotesError("Ошибка сети при загрузке заметок.");
+    } finally {
+      setPatientNotesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPatientForNotes) {
+      setPatientNotes([]);
+      setPatientNotesError("");
+      setPatientNoteFile(null);
+      return;
+    }
+    void loadPatientNotes(selectedPatientForNotes.id);
+  }, [selectedPatientForNotes, loadPatientNotes]);
+
+  function isLikelyPdfFile(file: File): boolean {
+    if (file.type === "application/pdf") return true;
+    if (file.type && file.type !== "") return false;
+    return /\.pdf$/i.test(file.name);
+  }
+
+  function setPatientNotePickedFile(file: File | null) {
+    if (!file) return;
+    if (!isLikelyPdfFile(file)) {
+      setPatientNotesError("Можно прикрепить только PDF файл.");
+      return;
+    }
+    setPatientNotesError("");
+    setPatientNoteFile(file);
+  }
+
+  async function savePatientNote() {
+    if (!selectedPatientForNotes) return;
+    if (!patientNoteFile) {
+      setPatientNotesError("Прикрепите PDF файл заметки.");
+      return;
+    }
+    setPatientNoteSaving(true);
+    setPatientNotesError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", patientNoteFile);
+      const res = await fetch(`/api/doctor/patients/${selectedPatientForNotes.id}/notes`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = (await res.json().catch(() => null)) as { message?: string } | null;
+      if (!res.ok) {
+        setPatientNotesError(data?.message ?? "Не удалось сохранить заметку.");
+        return;
+      }
+      setPatientNoteFile(null);
+      await loadPatientNotes(selectedPatientForNotes.id);
+    } catch {
+      setPatientNotesError("Ошибка сети при сохранении заметки.");
+    } finally {
+      setPatientNoteSaving(false);
+    }
+  }
 
   function clearPendingAvatarPreview() {
     if (pendingAvatarPreviewUrlRef.current) {
@@ -1643,6 +1740,132 @@ export default function DoctorWorkspacePanel({ currentUserName, currentUserEmail
                   <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#bdd0df] border-t-[#2f698f]" />
                   Загрузка пациентов...
                 </div>
+              ) : selectedPatientForNotes ? (
+                <div className="rounded-lg border border-[#dbe8f2] bg-[#f8fbff] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#1f3344]">{selectedPatientForNotes.fullName}</p>
+                      <p className="text-sm text-[#5f7a92]">{selectedPatientForNotes.email}</p>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPatientIdForNotes(null)}
+                        className="rounded-md border border-[#8fb0cc] bg-white px-3 py-1.5 text-sm font-medium text-[#39556d] transition hover:bg-[#edf4fa]"
+                      >
+                        Назад к списку
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm font-semibold text-[#1f3344]">Заметки</p>
+                  <input
+                    ref={patientNoteInputRef}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      e.target.value = "";
+                      setPatientNotePickedFile(file);
+                    }}
+                  />
+                  <div
+                    role="presentation"
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      patientNoteDragDepth.current += 1;
+                      setPatientNoteDragOver(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      patientNoteDragDepth.current = Math.max(0, patientNoteDragDepth.current - 1);
+                      if (patientNoteDragDepth.current === 0) setPatientNoteDragOver(false);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      patientNoteDragDepth.current = 0;
+                      setPatientNoteDragOver(false);
+                      const file = e.dataTransfer.files?.[0] ?? null;
+                      setPatientNotePickedFile(file);
+                    }}
+                    className={`mt-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition ${
+                      patientNoteDragOver ? "border-[#2f698f] bg-[#e8f2fa]" : "border-[#bfd2e2] bg-white"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-[#39556d]">Перетащите PDF файл заметки</p>
+                    <p className="mt-1 text-sm font-medium text-[#39556d]">или</p>
+                    <button
+                      type="button"
+                      onClick={() => patientNoteInputRef.current?.click()}
+                      className="mt-2 rounded-md border border-[#8fb0cc] bg-[#edf5fb] px-3 py-2 text-sm font-medium text-[#1f4e72] transition hover:bg-[#dfeef9]"
+                    >
+                      Выберите файл
+                    </button>
+                    {patientNoteFile ? (
+                      <p className="mt-3 text-xs font-medium text-[#39556d]">{patientNoteFile.name}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void savePatientNote()}
+                      disabled={patientNoteSaving}
+                      className="rounded-md bg-[#2f698f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#275877] disabled:opacity-60"
+                    >
+                      {patientNoteSaving ? "Сохранение..." : "Прикрепить заметку"}
+                    </button>
+                  </div>
+
+                    {patientNotesError ? (
+                    <p className="mt-2 text-sm text-red-600">{patientNotesError}</p>
+                    ) : null}
+
+                    {patientNotesLoading ? (
+                      <p className="mt-3 text-sm text-[#6b859a]">Загрузка заметок...</p>
+                    ) : patientNotes.length === 0 ? (
+                      <p className="mt-3 text-sm text-[#6b859a]">Заметок пока нет.</p>
+                    ) : (
+                      <ul className="mt-3 space-y-2">
+                        {patientNotes.map((note) => (
+                          <li
+                            key={note.id}
+                            className="flex flex-col gap-2 rounded-lg border border-[#dbe8f2] bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div>
+                              {note.fileName ? (
+                                <p className="text-sm font-semibold text-[#1f3344]">{note.fileName}</p>
+                              ) : (
+                                <p className="whitespace-pre-wrap text-sm text-[#2b3f50]">{note.content}</p>
+                              )}
+                              <p className="mt-1 text-xs text-[#5f7a92]">{note.doctorFullName}</p>
+                              <p className="mt-0.5 text-xs text-[#6b859a]">
+                                {new Date(note.createdAt).toLocaleString("ru-RU")}
+                              </p>
+                            </div>
+                            {note.fileName ? (
+                              <a
+                                href={`/api/doctor/patients/${selectedPatientForNotes.id}/notes/${note.id}/file`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center rounded-md border border-[#8fb0cc] bg-[#edf5fb] px-3 py-1.5 text-sm font-semibold text-[#1f4e72] transition hover:bg-[#dfeef9]"
+                              >
+                                Открыть PDF
+                              </a>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
               ) : filteredMyPatients.length === 0 ? (
                 <p className="py-8 text-center text-sm text-[#6b859a]">
                   Пациенты не найдены.
@@ -1666,7 +1889,13 @@ export default function DoctorWorkspacePanel({ currentUserName, currentUserEmail
                           <td className="px-4 py-3">{patient.fullName}</td>
                           <td className="px-4 py-3">{patient.email}</td>
                           <td className="px-4 py-3 text-[#5f7a92]">
-                            —
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPatientIdForNotes(patient.id)}
+                              className="rounded-md border border-[#8fb0cc] bg-[#edf5fb] px-3 py-1 text-xs font-semibold text-[#1f4e72] transition hover:bg-[#dfeef9]"
+                            >
+                              Просмотр
+                            </button>
                           </td>
                         </tr>
                       ))}

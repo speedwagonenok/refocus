@@ -12,7 +12,7 @@ type UserRow = {
   id: number;
   fullName: string;
   email: string;
-  phone: string | null;
+  phone?: string | null;
   hasConfirmedAppointment?: boolean;
   role: UserRole;
   createdAt: string;

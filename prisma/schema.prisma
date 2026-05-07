@@ -57,6 +57,8 @@ model User {
   patientAppointments Appointment[] @relation("PatientAppointments")
   patientDocuments PatientDocument[] @relation("PatientDocuments")
   uploadedPatientDocuments PatientDocument[] @relation("ManagerUploadedPatientDocuments")
+  doctorPatientNotes PatientNote[] @relation("DoctorPatientNotes")
+  patientDoctorNotes PatientNote[] @relation("PatientDoctorNotes")
 }
 
 model Appointment {
@@ -121,4 +123,20 @@ model PatientDocument {
 
   @@index([patientId, createdAt])
   @@index([managerId, createdAt])
+}
+
+model PatientNote {
+  id         Int      @id @default(autoincrement())
+  doctorId   Int
+  patientId  Int
+  content    String?  @db.Text
+  filePath   String?
+  fileName   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  doctor User @relation("DoctorPatientNotes", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient User @relation("PatientDoctorNotes", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, patientId, createdAt])
 }

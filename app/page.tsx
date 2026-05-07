@@ -1,4 +1,4 @@
-import HomePage from "@/app/homePage/homePage";
+import SignInPage from "@/app/signInPage/signInPage";
 export default function Page() {
-  return <HomePage />;
+  return <SignInPage />;
 }
