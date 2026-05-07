@@ -1,10 +1,14 @@
 import Link from "next/link";
 
-export default function LoginButton() {
+type Props = {
+  className?: string;
+};
+
+export default function LoginButton({ className = "" }: Props) {
   return (
     <Link
       href="/signInPage"
-      className="inline-flex items-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
+      className={`inline-flex items-center justify-center rounded-md bg-[#21486b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1a3a57] ${className}`}
     >
       Войти
     </Link>

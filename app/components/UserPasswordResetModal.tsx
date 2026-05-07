@@ -1,11 +1,14 @@
 import { FormEvent, useState } from "react";
 
+import { formatRuPhoneForDisplay } from "@/lib/authValidation";
+
 type UserRole = "PATIENT" | "DOCTOR" | "MANAGER" | "SYSTEM_ADMIN";
 
 type EditingUser = {
   id: number;
   fullName: string;
   email: string;
+  phone?: string | null;
   role: UserRole;
 };
 
@@ -66,7 +69,17 @@ export default function UserPasswordResetModal({
         className="w-full max-w-xl rounded-xl border border-[#c6d7e5] bg-white p-5 shadow-xl"
         onSubmit={onSubmit}
       >
-        <h4 className="text-lg font-semibold text-[#1f3344]">Редактирование пользователя</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-lg font-semibold text-[#1f3344]">Редактирование пользователя</h4>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Закрыть"
+            className="inline-flex h-8 w-8 items-center justify-center self-center rounded-md text-2xl leading-none font-medium text-[#1f3344] transition hover:bg-[#edf4fa]"
+          >
+            &times;
+          </button>
+        </div>
         <div className="mt-3 space-y-1 text-sm text-[#3f6079]">
           <p>
             <span className="font-medium text-[#1f3344]">ФИО:</span> {editingUser.fullName}
@@ -74,6 +87,12 @@ export default function UserPasswordResetModal({
           <p>
             <span className="font-medium text-[#1f3344]">Email:</span> {editingUser.email}
           </p>
+          {editingUser.role === "PATIENT" ? (
+            <p>
+              <span className="font-medium text-[#1f3344]">Телефон:</span>{" "}
+              <span className="tabular-nums">{formatRuPhoneForDisplay(editingUser.phone)}</span>
+            </p>
+          ) : null}
           <p>
             <span className="font-medium text-[#1f3344]">Роль:</span>{" "}
             {getRoleLabel(editingUser.role)}

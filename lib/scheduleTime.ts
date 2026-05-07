@@ -65,6 +65,21 @@ export function getSlotDateIso(weekStartDateIso: string, weekday: WeekdayValue):
   return addDaysToIsoDate(weekStartDateIso, weekdayOffset[weekday]);
 }
 
+/** Одиночное время в пределах [CLINIC_OPEN_TIME, CLINIC_CLOSE_TIME] (для полей ввода). */
+export function clampTimeToClinicHours(time: string): string {
+  const trimmed = time.trim();
+  if (!/^\d{1,2}:\d{2}$/.test(trimmed)) {
+    return time;
+  }
+  const m = timeToMinutes(trimmed);
+  if (!Number.isFinite(m)) {
+    return time;
+  }
+  const openMinutes = timeToMinutes(CLINIC_OPEN_TIME);
+  const closeMinutes = timeToMinutes(CLINIC_CLOSE_TIME);
+  return minutesToTime(clamp(m, openMinutes, closeMinutes));
+}
+
 export function isWithinClinicHours(startTime: string, endTime: string): boolean {
   return (
     timeToMinutes(startTime) >= timeToMinutes(CLINIC_OPEN_TIME) &&

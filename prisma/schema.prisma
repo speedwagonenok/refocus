@@ -27,14 +27,55 @@ enum Weekday {
   SUNDAY
 }
 
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PatientDocumentType {
+  CONTRACT
+  PRESCRIPTION
+  VISIT_PROTOCOL
+}
+
 model User {
   id              Int              @id @default(autoincrement())
   email           String           @unique
+  /// Нормализованный российский номер: 11 цифр, начинается с 7 (например 79991234567). Уникален, если задан.
+  phone           String?          @unique
   fullName        String
   role            Role             @default(PATIENT)
   passwordHash    String
+  avatarUrl       String?
+  doctorBio       String?          @db.Text
+  doctorSymptoms  Json?
   createdAt       DateTime         @default(now())
   doctorSchedules DoctorSchedule[]
+  doctorDiplomas  DoctorDiploma[]
+  doctorAppointments Appointment[] @relation("DoctorAppointments")
+  patientAppointments Appointment[] @relation("PatientAppointments")
+  patientDocuments PatientDocument[] @relation("PatientDocuments")
+  uploadedPatientDocuments PatientDocument[] @relation("ManagerUploadedPatientDocuments")
+}
+
+model Appointment {
+  id             Int      @id @default(autoincrement())
+  doctorId       Int
+  patientId      Int
+  slotDate       DateTime @db.Date
+  startTime      String
+  endTime        String
+  contactPhone   String?
+  status         AppointmentStatus @default(PENDING)
+  createdAt      DateTime @default(now())
+
+  doctor  User @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+  patient User @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, slotDate])
+  @@index([patientId, slotDate])
+  @@index([doctorId, slotDate, startTime, endTime])
 }
 
 model DoctorSchedule {
@@ -50,4 +91,34 @@ model DoctorSchedule {
   doctor User @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
   @@unique([doctorId, weekStartDate, weekday, startTime, endTime])
+}
+
+model DoctorDiploma {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  title     String
+  issuedBy  String?
+  year      Int?
+  /// Относительный путь к PDF внутри uploads/doctors/{id}/ (колонка в БД: imageUrl)
+  filePath  String   @map("imageUrl")
+  createdAt DateTime @default(now())
+
+  doctor User @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+}
+
+model PatientDocument {
+  id         Int                 @id @default(autoincrement())
+  patientId  Int
+  managerId  Int
+  type       PatientDocumentType
+  filePath   String
+  createdAt  DateTime            @default(now())
+
+  patient User @relation("PatientDocuments", fields: [patientId], references: [id], onDelete: Cascade)
+  manager User @relation("ManagerUploadedPatientDocuments", fields: [managerId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, createdAt])
+  @@index([managerId, createdAt])
 }

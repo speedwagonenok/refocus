@@ -43,6 +43,14 @@ export async function POST(req: Request) {
 
   const fullName = body.fullName.trim();
   const email = normalizeEmail(body.email);
+  const existingEmail = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (existingEmail) {
+    return NextResponse.json(
+      { message: "Пользователь с таким email уже зарегистрирован." },
+      { status: 409 },
+    );
+  }
+
   const passwordHash = await hash(body.password, 12);
 
   try {

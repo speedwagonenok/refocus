@@ -17,13 +17,13 @@ export default function RegistrationWindow() {
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
-    setSuccessToast(null);
+    setSuccessMessage(null);
 
     const fullNameError = getFullNameValidationError(fullName);
     if (fullNameError) {
@@ -63,7 +63,7 @@ export default function RegistrationWindow() {
         return;
       }
 
-      setSuccessToast("Успешно.");
+      setSuccessMessage("Успешно.");
       setTimeout(() => {
         router.push("/signInPage");
       }, 900);
@@ -188,7 +188,7 @@ export default function RegistrationWindow() {
           Уже зарегистрированы?{" "}
           <Link
             href="/signInPage"
-            className="font-medium text-black underline underline-offset-2 transition-opacity hover:opacity-70"
+            className="font-semibold text-[#21486b] underline decoration-[#21486b]/35 underline-offset-2 transition hover:text-[#1a3a57] hover:decoration-[#1a3a57]"
           >
             Войти в систему
           </Link>
@@ -197,16 +197,14 @@ export default function RegistrationWindow() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
+          className="inline-flex w-full items-center justify-center rounded-md bg-[#21486b] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a3a57] hover:shadow active:bg-[#16314a] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-[#21486b] disabled:hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#21486b]/45"
         >
           {isSubmitting ? "Регистрация..." : "Зарегистрироваться"}
         </button>
       </form>
 
-      {successToast ? (
-        <div className="fixed bottom-6 right-6 max-w-sm rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          {successToast}
-        </div>
+      {successMessage ? (
+        <p className="mt-4 text-sm text-[#2f698f]">{successMessage}</p>
       ) : null}
     </section>
   );

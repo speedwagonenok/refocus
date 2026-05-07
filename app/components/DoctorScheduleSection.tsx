@@ -119,7 +119,7 @@ export default function DoctorScheduleSection({
               value={doctorSearchQuery}
               onFocus={onDoctorSearchFocus}
               onChange={(event) => onDoctorSearchChange(event.target.value)}
-              placeholder="Поиск врача по ФИО, email или ID"
+              placeholder="Поиск врача по ФИО или email"
               className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] placeholder:text-[#4f6f88] outline-none transition focus:border-[#2f698f]"
             />
             {isDoctorDropdownOpen ? (
@@ -188,19 +188,36 @@ export default function DoctorScheduleSection({
                           className="rounded-md border border-[#9fb9cf] bg-white px-2 py-1 text-xs text-[#1f4e72] transition hover:bg-[#edf5fb]"
                           title="Редактировать день"
                         >
-                          ✎
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+                          </svg>
                         </button>
                       ) : null}
                     </div>
-                    <div className="mt-2 space-y-1 text-sm text-[#3f6079]">
+                    <div className="mt-2">
                       {daySlots.length === 0 ? (
                         <p className="text-[#6b859a]">Слотов нет</p>
                       ) : (
-                        daySlots.map((slot) => (
-                          <p key={slot.id}>
-                            {slot.startTime} - {slot.endTime}
-                          </p>
-                        ))
+                        <div className="flex flex-wrap gap-2">
+                          {daySlots.map((slot) => (
+                            <span
+                              key={slot.id}
+                              className="rounded-full border border-[#bfd2e2] bg-[#edf4fa] px-3 py-1 text-sm text-[#39556d]"
+                            >
+                              {slot.startTime} - {slot.endTime}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </section>
@@ -220,37 +237,50 @@ export default function DoctorScheduleSection({
                     type="button"
                     onClick={onCloseDayEditor}
                     aria-label="Закрыть"
-                    className="px-1 text-3xl leading-none font-medium text-[#1f4e72] transition hover:text-[#163c59]"
+                    className="inline-flex h-8 w-8 items-center justify-center self-center rounded-md text-2xl leading-none font-medium text-[#1f3344] transition hover:bg-[#edf4fa]"
                   >
                     &times;
                   </button>
                 </div>
-                <form className="mt-3 grid gap-4 md:grid-cols-3" onSubmit={onCreateSchedule}>
-                  <input
-                    type="time"
-                    value={scheduleStartTime}
-                    onChange={(event) => onScheduleStartTimeChange(event.target.value)}
-                    min={clinicOpenTime}
-                    max={clinicCloseTime}
-                    className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
-                    required
-                  />
-                  <input
-                    type="time"
-                    value={scheduleEndTime}
-                    onChange={(event) => onScheduleEndTimeChange(event.target.value)}
-                    min={clinicOpenTime}
-                    max={clinicCloseTime}
-                    className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={isCreatingSchedule}
-                    className="inline-flex items-center justify-center rounded-md bg-[#2f698f] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#275877] disabled:opacity-60"
-                  >
-                    {isCreatingSchedule ? "Добавление..." : "Добавить слот в день"}
-                  </button>
+                <form className="mt-3" onSubmit={onCreateSchedule}>
+                  <p className="mb-2 text-xs text-[#5f7a92]">
+                    Рабочие часы клиники: {clinicOpenTime} — {clinicCloseTime}
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-[#1f3344]">Начало</label>
+                      <input
+                        type="time"
+                        value={scheduleStartTime}
+                        onChange={(event) => onScheduleStartTimeChange(event.target.value)}
+                        min={clinicOpenTime}
+                        max={clinicCloseTime}
+                        className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-[#1f3344]">Окончание</label>
+                      <input
+                        type="time"
+                        value={scheduleEndTime}
+                        onChange={(event) => onScheduleEndTimeChange(event.target.value)}
+                        min={clinicOpenTime}
+                        max={clinicCloseTime}
+                        className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
+                        required
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        disabled={isCreatingSchedule}
+                        className="inline-flex w-full items-center justify-center rounded-md bg-[#2f698f] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#275877] disabled:opacity-60 md:w-auto"
+                      >
+                        {isCreatingSchedule ? "Добавление..." : "Добавить слот в день"}
+                      </button>
+                    </div>
+                  </div>
                 </form>
 
                 <div className="mt-5 overflow-x-auto rounded-xl border border-[#c6d7e5] bg-white">
@@ -274,8 +304,16 @@ export default function DoctorScheduleSection({
                             key={schedule.id}
                             className="border-t border-[#e3edf5] transition-colors hover:bg-[#f4f9fd]"
                           >
-                            <td className="px-4 py-3">{schedule.startTime}</td>
-                            <td className="px-4 py-3">{schedule.endTime}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex rounded-full border border-[#bfd2e2] bg-[#edf4fa] px-3 py-1 text-sm text-[#39556d]">
+                                {schedule.startTime}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex rounded-full border border-[#bfd2e2] bg-[#edf4fa] px-3 py-1 text-sm text-[#39556d]">
+                                {schedule.endTime}
+                              </span>
+                            </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-2">
                                 <button
@@ -290,7 +328,7 @@ export default function DoctorScheduleSection({
                                   type="button"
                                   onClick={() => onDeleteSchedule(schedule.id)}
                                   disabled={deletingScheduleId === schedule.id || isPastWeekSelected}
-                                  className="rounded-md border border-[#8fb0cc] bg-[#edf5fb] px-3 py-1 text-xs font-semibold text-[#1f4e72] transition hover:bg-[#dfeef9] disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="rounded-md border border-[#c99daa] bg-[#f6ecef] px-3 py-1 text-xs font-semibold text-[#8e3f52] transition hover:bg-[#f1e2e7] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   {deletingScheduleId === schedule.id ? "Удаление..." : "Удалить"}
                                 </button>

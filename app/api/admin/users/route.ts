@@ -1,4 +1,4 @@
-import { Prisma, Role } from "@prisma/client";
+import { AppointmentStatus, Prisma, Role } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 
@@ -24,20 +24,50 @@ function isAllowedEmployeeRole(role: unknown): role is Role {
 
 export async function GET() {
   const sessionUser = await getSessionUser();
-  if (!sessionUser || sessionUser.role !== Role.SYSTEM_ADMIN) {
+  const canListUsers =
+    sessionUser?.role === Role.SYSTEM_ADMIN || sessionUser?.role === Role.MANAGER;
+  if (!sessionUser || !canListUsers) {
     return NextResponse.json({ message: "Доступ запрещен." }, { status: 403 });
   }
 
   const users = await prisma.user.findMany({
+    where:
+      sessionUser.role === Role.MANAGER
+        ? {
+            role: Role.PATIENT,
+          }
+        : undefined,
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
       fullName: true,
       email: true,
+      phone: true,
       role: true,
       createdAt: true,
     },
   });
+
+  if (sessionUser.role === Role.MANAGER) {
+    const confirmedAppointments = await prisma.appointment.findMany({
+      where: {
+        status: AppointmentStatus.CONFIRMED,
+        patientId: { in: users.map((u) => u.id) },
+      },
+      select: { patientId: true },
+      distinct: ["patientId"],
+    });
+    const confirmedPatientIdSet = new Set(confirmedAppointments.map((item) => item.patientId));
+    return NextResponse.json(
+      {
+        users: users.map((user) => ({
+          ...user,
+          hasConfirmedAppointment: confirmedPatientIdSet.has(user.id),
+        })),
+      },
+      { status: 200 },
+    );
+  }
 
   return NextResponse.json({ users }, { status: 200 });
 }
@@ -94,6 +124,7 @@ export async function POST(req: Request) {
         id: true,
         fullName: true,
         email: true,
+        phone: true,
         role: true,
       },
     });
@@ -107,6 +138,14 @@ export async function POST(req: Request) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      const target = error.meta?.target;
+      const fields = Array.isArray(target) ? target : target != null ? [String(target)] : [];
+      if (fields.includes("phone")) {
+        return NextResponse.json(
+          { message: "Не удалось создать сотрудника. Такой номер телефона уже используется." },
+          { status: 409 },
+        );
+      }
       return NextResponse.json(
         { message: "Не удалось создать сотрудника. Такой email уже используется." },
         { status: 409 },

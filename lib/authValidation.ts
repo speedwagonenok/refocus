@@ -38,24 +38,45 @@ export function getFullNameValidationError(fullName: string): string | null {
   if (!trimmed) {
     return "Введите ФИО.";
   }
+  return null;
+}
 
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length < 2 || parts.length > 3) {
-    return "ФИО должно содержать 2 или 3 слова.";
+/** Нормализует ввод в 11 цифр вида 7XXXXXXXXXX или null, если формат не подходит. */
+export function normalizeRuPhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  let n = digits;
+  if (n.length === 11 && n.startsWith("8")) {
+    n = `7${n.slice(1)}`;
   }
-
-  if (!/^[А-Яа-яЁё\s]+$/.test(trimmed)) {
-    return "ФИО должно содержать только русские буквы и пробелы.";
+  if (n.length === 10 && n.startsWith("9")) {
+    n = `7${n}`;
   }
-
-  if (!parts.every((part) => /^[А-ЯЁ][а-яё]+$/.test(part))) {
-    return "Каждое слово ФИО должно начинаться с заглавной буквы и далее содержать строчные.";
+  if (n.length === 11 && n.startsWith("7") && /^7\d{10}$/.test(n)) {
+    return n;
   }
+  return null;
+}
 
-  if (!fullNameRegex.test(trimmed)) {
-    return "Некорректный формат ФИО.";
+/** Читабельный вид для 11 цифр `7XXXXXXXXXX`; иначе «—». */
+export function formatRuPhoneForDisplay(digits: string | null | undefined): string {
+  if (!digits || digits.length !== 11 || !digits.startsWith("7")) {
+    return "—";
   }
+  const a = digits.slice(1, 4);
+  const b = digits.slice(4, 7);
+  const c = digits.slice(7, 9);
+  const d = digits.slice(9, 11);
+  return `+7 ${a} ${b}-${c}-${d}`;
+}
 
+export function getPhoneValidationError(phone: string): string | null {
+  const trimmed = phone.trim();
+  if (!trimmed) {
+    return "Введите номер телефона.";
+  }
+  if (normalizeRuPhone(trimmed) === null) {
+    return "Введите корректный российский номер (например +7 999 123-45-67 или 8 999 123-45-67).";
+  }
   return null;
 }
 

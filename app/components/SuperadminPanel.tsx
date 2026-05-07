@@ -7,7 +7,6 @@ import AdminTopBar from "@/app/components/AdminTopBar";
 import CreateEmployeeSection from "@/app/components/CreateEmployeeSection";
 import DoctorScheduleSection from "@/app/components/DoctorScheduleSection";
 import ScheduleEditModal from "@/app/components/ScheduleEditModal";
-import ToastMessage from "@/app/components/ToastMessage";
 import UserPasswordResetModal from "@/app/components/UserPasswordResetModal";
 import UsersSection from "@/app/components/UsersSection";
 import {
@@ -15,6 +14,7 @@ import {
   CLINIC_OPEN_TIME,
   MAX_SLOT_DURATION_MINUTES,
   addDaysToIsoDate,
+  clampTimeToClinicHours,
   formatDateLocal,
   getAutoEndForStart,
   getAutoStartForEnd,
@@ -36,6 +36,7 @@ type UserRow = {
   id: number;
   fullName: string;
   email: string;
+  phone: string | null;
   role: UserRole;
   createdAt: string;
 };
@@ -136,7 +137,6 @@ export default function SuperadminPanel({
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(
     null,
   );
-  const [isToastVisible, setIsToastVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
@@ -190,33 +190,7 @@ export default function SuperadminPanel({
 
   function showToast(type: ToastType, message: string) {
     setToast({ type, message });
-    setIsToastVisible(false);
   }
-
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-
-    const enterFrame = requestAnimationFrame(() => {
-      setIsToastVisible(true);
-    });
-
-    const hideTimer = setTimeout(() => {
-      setIsToastVisible(false);
-    }, 2300);
-
-    const removeTimer = setTimeout(() => {
-      setToast(null);
-      setIsToastVisible(false);
-    }, 2600);
-
-    return () => {
-      cancelAnimationFrame(enterFrame);
-      clearTimeout(hideTimer);
-      clearTimeout(removeTimer);
-    };
-  }, [toast]);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -353,10 +327,23 @@ export default function SuperadminPanel({
         return true;
       }
 
+      if (activeTab === "EMPLOYEES") {
+        return (
+          user.fullName.toLowerCase().includes(normalizedQuery) ||
+          user.email.toLowerCase().includes(normalizedQuery)
+        );
+      }
+
+      const queryDigits = normalizedQuery.replace(/\D/g, "");
+      const phoneMatch =
+        queryDigits.length > 0 &&
+        user.phone != null &&
+        user.phone.includes(queryDigits);
+
       return (
         user.fullName.toLowerCase().includes(normalizedQuery) ||
         user.email.toLowerCase().includes(normalizedQuery) ||
-        String(user.id).includes(normalizedQuery)
+        phoneMatch
       );
     });
   }, [users, activeTab, roleFilter, searchQuery]);
@@ -465,23 +452,27 @@ export default function SuperadminPanel({
   }
 
   function handleCreateStartTimeChange(value: string) {
-    setScheduleStartTime(value);
-    setScheduleEndTime(getAutoEndForStart(value));
+    const clamped = clampTimeToClinicHours(value);
+    setScheduleStartTime(clamped);
+    setScheduleEndTime(getAutoEndForStart(clamped));
   }
 
   function handleCreateEndTimeChange(value: string) {
-    setScheduleEndTime(value);
-    setScheduleStartTime(getAutoStartForEnd(value));
+    const clamped = clampTimeToClinicHours(value);
+    setScheduleEndTime(clamped);
+    setScheduleStartTime(getAutoStartForEnd(clamped));
   }
 
   function handleEditStartTimeChange(value: string) {
-    setEditScheduleStartTime(value);
-    setEditScheduleEndTime(getAutoEndForStart(value));
+    const clamped = clampTimeToClinicHours(value);
+    setEditScheduleStartTime(clamped);
+    setEditScheduleEndTime(getAutoEndForStart(clamped));
   }
 
   function handleEditEndTimeChange(value: string) {
-    setEditScheduleEndTime(value);
-    setEditScheduleStartTime(getAutoStartForEnd(value));
+    const clamped = clampTimeToClinicHours(value);
+    setEditScheduleEndTime(clamped);
+    setEditScheduleStartTime(getAutoStartForEnd(clamped));
   }
 
   async function handleCreateEmployee(event: FormEvent<HTMLFormElement>) {
@@ -630,7 +621,10 @@ export default function SuperadminPanel({
       return;
     }
     if (startMinutes < openMinutes || endMinutes > closeMinutes) {
-      showToast("error", "Слоты доступны только в рабочее время: 10:00 - 21:00.");
+      showToast(
+        "error",
+        `Слоты доступны только в рабочее время: ${CLINIC_OPEN_TIME} – ${CLINIC_CLOSE_TIME}.`,
+      );
       return;
     }
     if (endMinutes - startMinutes > MAX_SLOT_DURATION_MINUTES) {
@@ -705,7 +699,10 @@ export default function SuperadminPanel({
       return;
     }
     if (startMinutes < openMinutes || endMinutes > closeMinutes) {
-      showToast("error", "Слоты доступны только в рабочее время: 10:00 - 21:00.");
+      showToast(
+        "error",
+        `Слоты доступны только в рабочее время: ${CLINIC_OPEN_TIME} – ${CLINIC_CLOSE_TIME}.`,
+      );
       return;
     }
     if (endMinutes - startMinutes > MAX_SLOT_DURATION_MINUTES) {
@@ -790,7 +787,7 @@ export default function SuperadminPanel({
     setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/signInPage");
+      router.push("/");
     } finally {
       setIsLoggingOut(false);
     }
@@ -895,6 +892,15 @@ export default function SuperadminPanel({
               deletingScheduleId={deletingScheduleId}
             />
           ) : null}
+          {toast ? (
+            <p
+              className={`mt-4 text-sm ${
+                toast.type === "success" ? "text-[#2f698f]" : "text-red-600"
+              }`}
+            >
+              {toast.message}
+            </p>
+          ) : null}
         </section>
       </div>
 
@@ -920,8 +926,6 @@ export default function SuperadminPanel({
         onSubmit={handleResetUserPassword}
         onCancel={closeUserEditModal}
       />
-
-      <ToastMessage toast={toast} isVisible={isToastVisible} />
     </main>
   );
 }

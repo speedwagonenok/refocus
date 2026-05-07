@@ -172,7 +172,7 @@ export default function LoginWindow() {
           Нет аккаунта?{" "}
           <Link
             href="/registrationPage"
-            className="font-medium text-black underline underline-offset-2 transition-opacity hover:opacity-70"
+            className="font-semibold text-[#21486b] underline decoration-[#21486b]/35 underline-offset-2 transition hover:text-[#1a3a57] hover:decoration-[#1a3a57]"
           >
             Перейти к регистрации
           </Link>
@@ -181,7 +181,7 @@ export default function LoginWindow() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex w-full items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
+          className="inline-flex w-full items-center justify-center rounded-md bg-[#21486b] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a3a57] hover:shadow active:bg-[#16314a] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-[#21486b] disabled:hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#21486b]/45"
         >
           {isSubmitting ? "Вход..." : "Войти"}
         </button>

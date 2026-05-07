@@ -129,7 +129,9 @@ export async function POST(req: Request) {
   }
   if (!isWithinClinicHours(startTime, endTime)) {
     return NextResponse.json(
-      { message: "Слоты доступны только в рабочее время: 10:00 - 21:00." },
+      {
+        message: `Слоты доступны только в рабочее время: ${CLINIC_OPEN_TIME} – ${CLINIC_CLOSE_TIME}.`,
+      },
       { status: 400 },
     );
   }

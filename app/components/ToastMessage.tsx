@@ -12,12 +12,12 @@ export default function ToastMessage({ toast, isVisible }: ToastMessageProps) {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 max-w-sm rounded-md px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 ease-out ${
-        isVisible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+      className={`mt-4 rounded-md border px-4 py-3 text-sm font-medium transition-all duration-200 ${
+        isVisible ? "opacity-100" : "opacity-0"
       } ${
         toast.type === "success"
-          ? "border border-[#2b5d86] bg-[#2f698f]"
-          : "border border-[#9b3f4b] bg-[#c25766]"
+          ? "border-[#8fb0cc] bg-[#edf5fb] text-[#1f4e72]"
+          : "border-[#d6a8b0] bg-[#f6ecef] text-[#8e3f52]"
       }`}
     >
       {toast.message}

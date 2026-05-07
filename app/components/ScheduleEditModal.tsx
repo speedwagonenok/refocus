@@ -35,26 +35,45 @@ export default function ScheduleEditModal({
         className="w-full max-w-xl rounded-xl border border-[#c6d7e5] bg-white p-5 shadow-xl"
         onSubmit={onSubmit}
       >
-        <h4 className="text-lg font-semibold text-[#1f3344]">Редактирование слота</h4>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <input
-            type="time"
-            value={editScheduleStartTime}
-            onChange={(event) => onStartTimeChange(event.target.value)}
-            min={clinicOpenTime}
-            max={clinicCloseTime}
-            className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
-            required
-          />
-          <input
-            type="time"
-            value={editScheduleEndTime}
-            onChange={(event) => onEndTimeChange(event.target.value)}
-            min={clinicOpenTime}
-            max={clinicCloseTime}
-            className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
-            required
-          />
+        <div className="flex items-center justify-between">
+          <h4 className="text-lg font-semibold text-[#1f3344]">Редактирование слота</h4>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Закрыть"
+            className="inline-flex h-8 w-8 items-center justify-center self-center rounded-md text-2xl leading-none font-medium text-[#1f3344] transition hover:bg-[#edf4fa]"
+          >
+            &times;
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-[#5f7a92]">
+          Рабочие часы клиники: {clinicOpenTime} — {clinicCloseTime}
+        </p>
+        <div className="mt-2 grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[#1f3344]">Начало</label>
+            <input
+              type="time"
+              value={editScheduleStartTime}
+              onChange={(event) => onStartTimeChange(event.target.value)}
+              min={clinicOpenTime}
+              max={clinicCloseTime}
+              className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[#1f3344]">Окончание</label>
+            <input
+              type="time"
+              value={editScheduleEndTime}
+              onChange={(event) => onEndTimeChange(event.target.value)}
+              min={clinicOpenTime}
+              max={clinicCloseTime}
+              className="w-full rounded-md border border-[#9fb9cf] bg-white px-3 py-2 text-[#1f3344] outline-none transition focus:border-[#2f698f]"
+              required
+            />
+          </div>
         </div>
         <div className="mt-5 flex gap-2">
           <button
