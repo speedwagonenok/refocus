@@ -38,6 +38,24 @@ export function getFullNameValidationError(fullName: string): string | null {
   if (!trimmed) {
     return "Введите ФИО.";
   }
+
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length < 2 || parts.length > 3) {
+    return "ФИО должно содержать 2 или 3 слова.";
+  }
+
+  if (!/^[А-Яа-яЁё\s]+$/.test(trimmed)) {
+    return "ФИО должно содержать только русские буквы и пробелы.";
+  }
+
+  if (!parts.every((part) => /^[А-ЯЁ][а-яё]+$/.test(part))) {
+    return "Каждое слово ФИО должно начинаться с заглавной буквы и далее содержать строчные.";
+  }
+
+  if (!fullNameRegex.test(trimmed)) {
+    return "Некорректный формат ФИО.";
+  }
+
   return null;
 }
 

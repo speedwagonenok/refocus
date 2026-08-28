@@ -1,6 +1,7 @@
 import { AppointmentStatus, Role, Weekday } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { isAppointmentPast, slotDateToIsoDate } from "@/lib/appointments";
 import { prisma } from "@/lib/prisma";
 import {
   addDaysToIsoDate,
@@ -83,13 +84,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       slotDate: true,
       startTime: true,
       endTime: true,
+      status: true,
     },
   });
   const busySet = new Set(
-    busySlots.map(
-      (slot) =>
-        `${slot.slotDate.toISOString().slice(0, 10)}|${slot.startTime}|${slot.endTime}`,
-    ),
+    busySlots
+      .filter((slot) => {
+        const slotIso = slotDateToIsoDate(slot.slotDate);
+        return !isAppointmentPast(slotIso, slot.endTime);
+      })
+      .map((slot) => `${slotDateToIsoDate(slot.slotDate)}|${slot.startTime}|${slot.endTime}`),
   );
 
   type Slot = { startTime: string; endTime: string };

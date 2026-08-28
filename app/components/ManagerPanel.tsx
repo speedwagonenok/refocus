@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import UsersSection from "@/app/components/UsersSection";
+import { isAppointmentPast } from "@/lib/appointments";
 import { formatRuPhoneForDisplay } from "@/lib/authValidation";
 
 type UserRole = "PATIENT" | "DOCTOR" | "MANAGER" | "SYSTEM_ADMIN";
@@ -56,7 +57,8 @@ type ManagerPanelProps = {
 };
 
 function getAppointmentDateTimeMs(slotDate: string, time: string): number {
-  return new Date(`${slotDate}T${time}:00`).getTime();
+  const datePart = slotDate.slice(0, 10);
+  return new Date(`${datePart}T${time}:00`).getTime();
 }
 
 function sortAppointmentsByNearestFirst(items: ManagerAppointmentRow[]): ManagerAppointmentRow[] {
@@ -248,7 +250,8 @@ export default function ManagerPanel({ currentUserName, currentUserEmail }: Mana
     return roleLabelByValue[role];
   }
 
-  function renderAppointmentStatusLabel(status: AppointmentStatus) {
+  function renderAppointmentStatusLabel(appointment: ManagerAppointmentRow) {
+    const { status, slotDate, endTime } = appointment;
     if (status === "CONFIRMED") {
       return (
         <span className="inline-flex rounded-md border border-emerald-300/70 bg-emerald-50/95 px-3 py-1 text-xs font-medium text-emerald-900/90">
@@ -263,9 +266,15 @@ export default function ManagerPanel({ currentUserName, currentUserEmail }: Mana
         </span>
       );
     }
+    const pastPending = isAppointmentPast(slotDate, endTime);
     return (
-      <span className="inline-flex rounded-md border border-amber-300/70 bg-amber-50/95 px-3 py-1 text-xs font-semibold text-amber-900/90">
-        Ожидает подтверждения
+      <span className="inline-flex flex-col items-start gap-0.5">
+        <span className="inline-flex rounded-md border border-amber-300/70 bg-amber-50/95 px-3 py-1 text-xs font-semibold text-amber-900/90">
+          Ожидает подтверждения
+        </span>
+        {pastPending ? (
+          <span className="text-[10px] font-medium text-amber-800/75">Время приёма прошло</span>
+        ) : null}
       </span>
     );
   }
@@ -448,7 +457,7 @@ export default function ManagerPanel({ currentUserName, currentUserEmail }: Mana
                             {formatRuPhoneForDisplay(a.contactPhone)}
                           </td>
                           <td className="px-4 py-3">
-                            {renderAppointmentStatusLabel(a.status)}
+                            {renderAppointmentStatusLabel(a)}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">

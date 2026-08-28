@@ -134,9 +134,11 @@ export default function SuperadminPanel({
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    type: ToastType;
+    message: string;
+    section: AdminSection;
+  } | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
@@ -186,10 +188,16 @@ export default function SuperadminPanel({
     setActiveTab(tab);
     setRoleFilter("ALL");
     setActiveSection("USERS");
+    setToast(null);
   }
 
-  function showToast(type: ToastType, message: string) {
-    setToast({ type, message });
+  function handleSectionChange(section: AdminSection) {
+    setActiveSection(section);
+    setToast(null);
+  }
+
+  function showToast(type: ToastType, message: string, section: AdminSection) {
+    setToast({ type, message, section });
   }
 
   const loadUsers = useCallback(async () => {
@@ -202,13 +210,13 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok || !data?.users) {
-        showToast("error", data?.message ?? "Не удалось загрузить пользователей.");
+        showToast("error", data?.message ?? "Не удалось загрузить пользователей.", "USERS");
         return;
       }
 
       setUsers(data.users);
     } catch {
-      showToast("error", "Ошибка сети при загрузке пользователей.");
+      showToast("error", "Ошибка сети при загрузке пользователей.", "USERS");
     } finally {
       setLoading(false);
     }
@@ -220,7 +228,7 @@ export default function SuperadminPanel({
 
   const loadSchedules = useCallback(async () => {
     if (!selectedWeekStartDate) {
-      showToast("error", "Некорректная неделя для расписания.");
+      showToast("error", "Некорректная неделя для расписания.", "DOCTOR_SCHEDULE");
       return;
     }
     setIsSchedulesLoading(true);
@@ -235,14 +243,18 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok || !data?.doctors || !data?.schedules) {
-        showToast("error", data?.message ?? "Не удалось загрузить расписание врачей.");
+        showToast(
+          "error",
+          data?.message ?? "Не удалось загрузить расписание врачей.",
+          "DOCTOR_SCHEDULE",
+        );
         return;
       }
 
       setDoctors(data.doctors);
       setSchedules(data.schedules);
     } catch {
-      showToast("error", "Ошибка сети при загрузке расписания врачей.");
+      showToast("error", "Ошибка сети при загрузке расписания врачей.", "DOCTOR_SCHEDULE");
     } finally {
       setIsSchedulesLoading(false);
     }
@@ -424,7 +436,11 @@ export default function SuperadminPanel({
 
   function beginScheduleEdit(schedule: ScheduleRow) {
     if (isPastWeekSelected || isPastDayEditorSelected) {
-      showToast("error", "Прошедшие даты доступны только для просмотра.");
+      showToast(
+        "error",
+        "Прошедшие даты доступны только для просмотра.",
+        "DOCTOR_SCHEDULE",
+      );
       return;
     }
     setEditingScheduleId(schedule.id);
@@ -491,18 +507,18 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось создать сотрудника.");
+        showToast("error", data?.message ?? "Не удалось создать сотрудника.", "CREATE_EMPLOYEE");
         return;
       }
 
-      showToast("success", data?.message ?? "Сотрудник создан.");
+      showToast("success", data?.message ?? "Сотрудник создан.", "CREATE_EMPLOYEE");
       setFullName("");
       setEmail("");
       setPassword("");
       setRole("DOCTOR");
       await loadUsers();
     } catch {
-      showToast("error", "Ошибка сети при создании сотрудника.");
+      showToast("error", "Ошибка сети при создании сотрудника.", "CREATE_EMPLOYEE");
     } finally {
       setIsCreating(false);
     }
@@ -542,14 +558,14 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось сбросить пароль.");
+        showToast("error", data?.message ?? "Не удалось сбросить пароль.", "USERS");
         return;
       }
 
-      showToast("success", data?.message ?? "Пароль пользователя обновлен.");
+      showToast("success", data?.message ?? "Пароль пользователя обновлен.", "USERS");
       closeUserEditModal();
     } catch {
-      showToast("error", "Ошибка сети при сбросе пароля.");
+      showToast("error", "Ошибка сети при сбросе пароля.", "USERS");
     } finally {
       setIsResettingUserPassword(false);
     }
@@ -557,7 +573,7 @@ export default function SuperadminPanel({
 
   async function handleDeleteEmployee(user: UserRow) {
     if (user.role === "PATIENT") {
-      showToast("error", "Удаление доступно только для сотрудников.");
+      showToast("error", "Удаление доступно только для сотрудников.", "USERS");
       return;
     }
 
@@ -578,7 +594,7 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось удалить сотрудника.");
+        showToast("error", data?.message ?? "Не удалось удалить сотрудника.", "USERS");
         return;
       }
 
@@ -586,10 +602,10 @@ export default function SuperadminPanel({
         closeUserEditModal();
       }
 
-      showToast("success", data?.message ?? "Сотрудник удален.");
+      showToast("success", data?.message ?? "Сотрудник удален.", "USERS");
       await loadUsers();
     } catch {
-      showToast("error", "Ошибка сети при удалении сотрудника.");
+      showToast("error", "Ошибка сети при удалении сотрудника.", "USERS");
     } finally {
       setDeletingEmployeeId(null);
     }
@@ -604,31 +620,32 @@ export default function SuperadminPanel({
     const closeMinutes = timeToMinutes(CLINIC_CLOSE_TIME);
 
     if (isPastWeekSelected || isPastDayEditorSelected) {
-      showToast("error", "Прошедшие даты доступны только для просмотра.");
+      showToast("error", "Прошедшие даты доступны только для просмотра.", "DOCTOR_SCHEDULE");
       return;
     }
     if (isTodayDayEditorSelected && scheduleStartTime < currentTimeHHMM) {
-      showToast("error", "Для текущего дня нельзя указывать прошедшее время.");
+      showToast("error", "Для текущего дня нельзя указывать прошедшее время.", "DOCTOR_SCHEDULE");
       return;
     }
 
     if (!scheduleDoctorId) {
-      showToast("error", "Сначала добавьте хотя бы одного врача.");
+      showToast("error", "Сначала добавьте хотя бы одного врача.", "DOCTOR_SCHEDULE");
       return;
     }
     if (!selectedWeekStartDate) {
-      showToast("error", "Выберите корректную неделю.");
+      showToast("error", "Выберите корректную неделю.", "DOCTOR_SCHEDULE");
       return;
     }
     if (startMinutes < openMinutes || endMinutes > closeMinutes) {
       showToast(
         "error",
         `Слоты доступны только в рабочее время: ${CLINIC_OPEN_TIME} – ${CLINIC_CLOSE_TIME}.`,
+        "DOCTOR_SCHEDULE",
       );
       return;
     }
     if (endMinutes - startMinutes > MAX_SLOT_DURATION_MINUTES) {
-      showToast("error", "Максимальная длительность одного слота - 1 час.");
+      showToast("error", "Максимальная длительность одного слота - 1 час.", "DOCTOR_SCHEDULE");
       return;
     }
     const shouldCreate = window.confirm("Добавить этот слот расписания?");
@@ -656,14 +673,14 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось добавить слот.");
+        showToast("error", data?.message ?? "Не удалось добавить слот.", "DOCTOR_SCHEDULE");
         return;
       }
 
-      showToast("success", data?.message ?? "Слот расписания добавлен.");
+      showToast("success", data?.message ?? "Слот расписания добавлен.", "DOCTOR_SCHEDULE");
       await loadSchedules();
     } catch {
-      showToast("error", "Ошибка сети при добавлении слота.");
+      showToast("error", "Ошибка сети при добавлении слота.", "DOCTOR_SCHEDULE");
     } finally {
       setIsCreatingSchedule(false);
     }
@@ -678,11 +695,11 @@ export default function SuperadminPanel({
     const closeMinutes = timeToMinutes(CLINIC_CLOSE_TIME);
 
     if (isPastWeekSelected || isPastDayEditorSelected) {
-      showToast("error", "Прошедшие даты доступны только для просмотра.");
+      showToast("error", "Прошедшие даты доступны только для просмотра.", "DOCTOR_SCHEDULE");
       return;
     }
     if (isTodayDayEditorSelected && editScheduleStartTime < currentTimeHHMM) {
-      showToast("error", "Для текущего дня нельзя указывать прошедшее время.");
+      showToast("error", "Для текущего дня нельзя указывать прошедшее время.", "DOCTOR_SCHEDULE");
       return;
     }
 
@@ -691,22 +708,23 @@ export default function SuperadminPanel({
     }
 
     if (!editScheduleDoctorId) {
-      showToast("error", "Выберите врача.");
+      showToast("error", "Выберите врача.", "DOCTOR_SCHEDULE");
       return;
     }
     if (!selectedWeekStartDate) {
-      showToast("error", "Выберите корректную неделю.");
+      showToast("error", "Выберите корректную неделю.", "DOCTOR_SCHEDULE");
       return;
     }
     if (startMinutes < openMinutes || endMinutes > closeMinutes) {
       showToast(
         "error",
         `Слоты доступны только в рабочее время: ${CLINIC_OPEN_TIME} – ${CLINIC_CLOSE_TIME}.`,
+        "DOCTOR_SCHEDULE",
       );
       return;
     }
     if (endMinutes - startMinutes > MAX_SLOT_DURATION_MINUTES) {
-      showToast("error", "Максимальная длительность одного слота - 1 час.");
+      showToast("error", "Максимальная длительность одного слота - 1 час.", "DOCTOR_SCHEDULE");
       return;
     }
     const shouldSave = window.confirm("Сохранить изменения слота?");
@@ -734,15 +752,15 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось обновить слот.");
+        showToast("error", data?.message ?? "Не удалось обновить слот.", "DOCTOR_SCHEDULE");
         return;
       }
 
-      showToast("success", data?.message ?? "Слот обновлен.");
+      showToast("success", data?.message ?? "Слот обновлен.", "DOCTOR_SCHEDULE");
       setEditingScheduleId(null);
       await loadSchedules();
     } catch {
-      showToast("error", "Ошибка сети при обновлении слота.");
+      showToast("error", "Ошибка сети при обновлении слота.", "DOCTOR_SCHEDULE");
     } finally {
       setUpdatingScheduleId(null);
     }
@@ -750,7 +768,7 @@ export default function SuperadminPanel({
 
   async function handleDeleteSchedule(scheduleId: number) {
     if (isPastWeekSelected || isPastDayEditorSelected) {
-      showToast("error", "Прошедшие даты доступны только для просмотра.");
+      showToast("error", "Прошедшие даты доступны только для просмотра.", "DOCTOR_SCHEDULE");
       return;
     }
 
@@ -770,14 +788,14 @@ export default function SuperadminPanel({
         | null;
 
       if (!response.ok) {
-        showToast("error", data?.message ?? "Не удалось удалить слот.");
+        showToast("error", data?.message ?? "Не удалось удалить слот.", "DOCTOR_SCHEDULE");
         return;
       }
 
-      showToast("success", data?.message ?? "Слот удален.");
+      showToast("success", data?.message ?? "Слот удален.", "DOCTOR_SCHEDULE");
       await loadSchedules();
     } catch {
-      showToast("error", "Ошибка сети при удалении слота.");
+      showToast("error", "Ошибка сети при удалении слота.", "DOCTOR_SCHEDULE");
     } finally {
       setDeletingScheduleId(null);
     }
@@ -804,7 +822,7 @@ export default function SuperadminPanel({
       />
 
       <div className="mx-auto flex min-h-[calc(100vh-72px)] w-full max-w-7xl gap-4 px-4 py-6 md:gap-6 md:px-6">
-        <AdminSidebar activeSection={activeSection} onChangeSection={setActiveSection} />
+        <AdminSidebar activeSection={activeSection} onChangeSection={handleSectionChange} />
 
         <section className="min-w-0 flex-1 rounded-2xl bg-[#f8fbff] p-8 shadow-lg">
           <h1 className="text-2xl font-semibold text-gray-900">{activeSectionTitle}</h1>
@@ -892,7 +910,7 @@ export default function SuperadminPanel({
               deletingScheduleId={deletingScheduleId}
             />
           ) : null}
-          {toast ? (
+          {toast && toast.section === activeSection ? (
             <p
               className={`mt-4 text-sm ${
                 toast.type === "success" ? "text-[#2f698f]" : "text-red-600"

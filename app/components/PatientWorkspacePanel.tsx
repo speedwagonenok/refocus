@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import PatientDoctorProfileCard, {
   type PatientDoctorPublicProfile,
 } from "@/app/components/PatientDoctorProfileCard";
+import { isAppointmentPast } from "@/lib/appointments";
 import { psychotherapySymptomGroups } from "@/lib/psychotherapyPresets";
 
 type InlineNoticeType = "success" | "error";
@@ -766,7 +767,9 @@ export default function PatientWorkspacePanel({
                               ? "подтверждена"
                               : item.status === "CANCELLED"
                                 ? "отменена"
-                                : "ожидает подтверждения"}
+                                : isAppointmentPast(item.slotDate, item.endTime)
+                                  ? "ожидает подтверждения (время приёма прошло)"
+                                  : "ожидает подтверждения"}
                           </p>
                           <p className="mt-0.5 tabular-nums">
                             Время: {item.startTime}–{item.endTime}

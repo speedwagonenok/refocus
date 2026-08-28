@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local SQL dumps (keep on disk / OneDrive, not in git)
+/backups/*
+!/backups/.gitkeep
 
 # vercel
 .vercel

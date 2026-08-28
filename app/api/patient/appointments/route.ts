@@ -1,6 +1,7 @@
 import { AppointmentStatus, Prisma, Role, Weekday } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { isAppointmentPast } from "@/lib/appointments";
 import { normalizeRuPhone } from "@/lib/authValidation";
 import { parseDoctorMatchMeta } from "@/lib/doctorSymptomsJson";
 import { prisma } from "@/lib/prisma";
@@ -145,7 +146,7 @@ export async function POST(req: Request) {
   if (!scheduleSlot) {
     return NextResponse.json({ message: "Этот слот уже недоступен." }, { status: 409 });
   }
-  const activeAtSameSlot = await prisma.appointment.findFirst({
+  const candidatesAtSameSlot = await prisma.appointment.findMany({
     where: {
       doctorId,
       slotDate: toUtcDateOnly(slotDate),
@@ -155,9 +156,12 @@ export async function POST(req: Request) {
         in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
       },
     },
-    select: { id: true },
+    select: { id: true, slotDate: true, endTime: true },
   });
-  if (activeAtSameSlot) {
+  const blockingAtSameSlot = candidatesAtSameSlot.find(
+    (row) => !isAppointmentPast(row.slotDate.toISOString().slice(0, 10), row.endTime),
+  );
+  if (blockingAtSameSlot) {
     return NextResponse.json({ message: "Этот слот уже занят." }, { status: 409 });
   }
 

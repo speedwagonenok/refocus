@@ -54,16 +54,24 @@ export async function POST(req: Request) {
 
   const email = normalizeEmail(body.email);
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      role: true,
-      passwordHash: true,
-    },
-  });
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        passwordHash: true,
+      },
+    });
+  } catch {
+    return NextResponse.json(
+      { message: "Нет соединения с базой данных. Проверьте, что Postgres запущен." },
+      { status: 503 },
+    );
+  }
 
   if (!user) {
     return NextResponse.json(

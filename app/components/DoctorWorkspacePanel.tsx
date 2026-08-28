@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AvatarCropModal from "@/app/components/AvatarCropModal";
+import { getAppointmentStatusLabelRu } from "@/lib/appointments";
 import { formatRuPhoneForDisplay } from "@/lib/authValidation";
 import { psychotherapyDiseaseGroups, psychotherapySymptomGroups } from "@/lib/psychotherapyPresets";
 import { addDaysToIsoDate, formatDateLocal } from "@/lib/scheduleTime";
@@ -2461,12 +2462,17 @@ export default function DoctorWorkspacePanel({ currentUserName, currentUserEmail
               </p>
               <p>
                 <span className="font-semibold text-[#1f3344]">Статус:</span>{" "}
-                {scheduleSlotModal.status === "CONFIRMED"
-                  ? "подтвержден"
-                  : scheduleSlotModal.status === "CANCELLED"
-                    ? "отменен"
-                    : "ожидает подтверждения"}
+                {getAppointmentStatusLabelRu(
+                  scheduleSlotModal.status,
+                  scheduleSlotModal.dateIso,
+                  scheduleSlotModal.endTime,
+                )}
               </p>
+              {scheduleSlotModal.status === "PENDING" ? (
+                <p className="text-xs text-[#6b859a]">
+                  Подтверждает менеджер в панели «Записи»; врач статус не меняет.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

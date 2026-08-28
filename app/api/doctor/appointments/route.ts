@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ message: "Доступ запрещён." }, { status: 403 });
   }
 
-  const appointments = await prisma.appointment.findMany({
+  const rows = await prisma.appointment.findMany({
     where: { doctorId: sessionUser.id },
     orderBy: [{ slotDate: "asc" }, { startTime: "asc" }],
     select: {
@@ -30,6 +30,12 @@ export async function GET() {
       },
     },
   });
+
+  const appointments = rows.map((row) => ({
+    ...row,
+    slotDate: row.slotDate.toISOString().slice(0, 10),
+    createdAt: row.createdAt.toISOString(),
+  }));
 
   return NextResponse.json({ appointments }, { status: 200 });
 }

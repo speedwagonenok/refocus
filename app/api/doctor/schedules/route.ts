@@ -1,6 +1,7 @@
 import { AppointmentStatus, Role, Weekday } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { pickAppointmentForSlotDisplay } from "@/lib/appointments";
 import { prisma } from "@/lib/prisma";
 import { getSlotDateIso, type WeekdayValue } from "@/lib/scheduleTime";
 import { getSessionUser } from "@/lib/sessionUser";
@@ -67,13 +68,13 @@ export async function GET(req: Request) {
         lte: weekEnd,
       },
     },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: {
       id: true,
       slotDate: true,
       startTime: true,
       endTime: true,
       status: true,
+      createdAt: true,
       patient: {
         select: {
           id: true,
@@ -83,6 +84,16 @@ export async function GET(req: Request) {
       },
     },
   });
+  const appointmentsBySlot = new Map<string, typeof appointments>();
+  for (const item of appointments) {
+    const key = `${item.slotDate.toISOString().slice(0, 10)}|${item.startTime}|${item.endTime}`;
+    const bucket = appointmentsBySlot.get(key);
+    if (bucket) {
+      bucket.push(item);
+    } else {
+      appointmentsBySlot.set(key, [item]);
+    }
+  }
   const appointmentBySlot = new Map<
     string,
     {
@@ -95,15 +106,15 @@ export async function GET(req: Request) {
       };
     }
   >();
-  for (const item of appointments) {
-    const key = `${item.slotDate.toISOString().slice(0, 10)}|${item.startTime}|${item.endTime}`;
-    if (appointmentBySlot.has(key)) {
+  for (const [key, bucket] of appointmentsBySlot) {
+    const picked = pickAppointmentForSlotDisplay(bucket);
+    if (!picked) {
       continue;
     }
     appointmentBySlot.set(key, {
-      id: item.id,
-      status: item.status,
-      patient: item.patient,
+      id: picked.id,
+      status: picked.status,
+      patient: picked.patient,
     });
   }
 

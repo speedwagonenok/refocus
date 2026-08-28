@@ -1,0 +1,106 @@
+@startuml fig_2_7_physical_db
+title Рисунок 2.7 — Физическая модель данных (таблицы PostgreSQL)
+
+skinparam shadowing false
+skinparam linetype ortho
+
+entity "User" as User {
+  * **id** : SERIAL <<PK>>
+  --
+  * email : TEXT <<UK>>
+  phone : TEXT <<UK>>
+  * fullName : TEXT
+  * role : Role
+  * passwordHash : TEXT
+  avatarUrl : TEXT
+  doctorBio : TEXT
+  doctorSymptoms : JSONB
+  * createdAt : TIMESTAMPTZ
+}
+
+entity "DoctorSchedule" as DS {
+  * **id** : SERIAL <<PK>>
+  --
+  * doctorId : INT <<FK>>
+  * weekStartDate : DATE
+  * weekday : Weekday
+  * startTime : TEXT
+  * endTime : TEXT
+  * isActive : BOOLEAN
+  * createdAt : TIMESTAMPTZ
+  ..
+  UK (doctorId, weekStartDate, weekday, startTime, endTime)
+}
+
+entity "Appointment" as Appt {
+  * **id** : SERIAL <<PK>>
+  --
+  * doctorId : INT <<FK>>
+  * patientId : INT <<FK>>
+  * slotDate : DATE
+  * startTime : TEXT
+  * endTime : TEXT
+  contactPhone : TEXT
+  * status : AppointmentStatus
+  * createdAt : TIMESTAMPTZ
+  ..
+  IX (doctorId, slotDate)
+  IX (patientId, slotDate)
+  IX (doctorId, slotDate, startTime, endTime)
+}
+
+entity "DoctorDiploma" as DD {
+  * **id** : SERIAL <<PK>>
+  --
+  * doctorId : INT <<FK>>
+  * title : TEXT
+  issuedBy : TEXT
+  year : INT
+  * imageUrl : TEXT
+  * createdAt : TIMESTAMPTZ
+  ..
+  IX (doctorId)
+}
+
+entity "PatientDocument" as PD {
+  * **id** : SERIAL <<PK>>
+  --
+  * patientId : INT <<FK>>
+  * managerId : INT <<FK>>
+  * type : PatientDocumentType
+  * filePath : TEXT
+  * createdAt : TIMESTAMPTZ
+  ..
+  IX (patientId, createdAt)
+  IX (managerId, createdAt)
+}
+
+entity "PatientNote" as PN {
+  * **id** : SERIAL <<PK>>
+  --
+  * doctorId : INT <<FK>>
+  * patientId : INT <<FK>>
+  content : TEXT
+  filePath : TEXT
+  fileName : TEXT
+  * createdAt : TIMESTAMPTZ
+  * updatedAt : TIMESTAMPTZ
+  ..
+  IX (doctorId, patientId, createdAt)
+}
+
+User ||--o{ DS : doctorId
+User ||--o{ Appt : doctorId
+User ||--o{ Appt : patientId
+User ||--o{ DD : doctorId
+User ||--o{ PD : patientId
+User ||--o{ PD : managerId
+User ||--o{ PN : doctorId
+User ||--o{ PN : patientId
+
+note bottom
+  Перечисления PostgreSQL:
+  Role, Weekday, AppointmentStatus, PatientDocumentType
+end note
+
+@enduml
